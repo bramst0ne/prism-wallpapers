@@ -175,16 +175,6 @@ def fetch_titles(tmdb_id, id_type, count, config):
     clean_id = target_id.replace("-movies", "").replace("-tv", "")
 
     if id_type == "curated":
-        # Keyword-driven endpoints — no numeric ID required.
-        # Supports optional -movies / -tv suffix on the keyword, e.g. "trending-movies".
-        #
-        # Movie-only endpoints:  now_playing, upcoming
-        # TV-only endpoints:     airing_today, on_the_air
-        # Both endpoints:        trending, popular, top_rated
-        #
-        # trending supports an optional time window suffix: trending-day or trending-week
-        # (defaults to day).  e.g. "trending-week-movies"
-
         MOVIE_ENDPOINTS = {
             "now_playing":  "/movie/now_playing",
             "upcoming":     "/movie/upcoming",
@@ -211,9 +201,7 @@ def fetch_titles(tmdb_id, id_type, count, config):
 
         combined = []
 
-        # Handle trending separately — supports day/week window
         if clean_id.startswith("trending"):
-            # Accept: "trending", "trending-day", "trending-week"
             parts = clean_id.split("-")
             window = "day"
             for p in parts:
@@ -223,31 +211,47 @@ def fetch_titles(tmdb_id, id_type, count, config):
                 combined += _fetch_paginated(f"/trending/movie/{window}", "movie", count)
             if not only_movies:
                 combined += _fetch_paginated(f"/trending/tv/{window}", "tv", count)
-
         else:
-            # Movie-only keywords
             if clean_id in MOVIE_ENDPOINTS and not only_tv:
                 combined += _fetch_paginated(MOVIE_ENDPOINTS[clean_id], "movie", count)
-
-            # TV-only keywords
             if clean_id in TV_ENDPOINTS and not only_movies:
                 combined += _fetch_paginated(TV_ENDPOINTS[clean_id], "tv", count)
-
-            # Shared keywords (popular, top_rated) — fetch both unless restricted
-            if clean_id in MOVIE_ENDPOINTS and clean_id in TV_ENDPOINTS:
-                pass  # already handled above via individual checks
-            elif clean_id not in MOVIE_ENDPOINTS and clean_id not in TV_ENDPOINTS and not clean_id.startswith("trending"):
-                sys.exit(f"  Error: Unknown curated keyword '{clean_id}'. "
-                         f"Valid options: trending, trending-day, trending-week, "
-                         f"now_playing, upcoming, airing_today, on_the_air, popular, top_rated")
+            if clean_id not in MOVIE_ENDPOINTS and clean_id not in TV_ENDPOINTS and not clean_id.startswith("trending"):
+                sys.exit(f"  Error: Unknown curated keyword '{clean_id}'.")
 
     elif id_type == "network": combined = _pull_media("tv", {"with_networks": clean_id}, count, config)
     elif id_type == "company": combined = ([] if only_movies else _pull_media("tv", {"with_companies": clean_id}, count, config)) + ([] if only_tv else _pull_media("movie", {"with_companies": clean_id}, count, config))
     elif id_type == "provider": combined = ([] if only_movies else _pull_media("tv", {"with_watch_providers": clean_id, "watch_region": "US"}, count, config)) + ([] if only_tv else _pull_media("movie", {"with_watch_providers": clean_id, "watch_region": "US"}, count, config))
     elif id_type == "genre": combined = ([] if only_tv else _pull_media("movie", {"with_genres": clean_id}, count, config)) + ([] if only_movies else _pull_media("tv", {"with_genres": clean_id}, count, config))
-    else: sys.exit(1)
+    
+    elif id_type == "person":
+        num_match = re.search(r'\d+', clean_id)
+        numeric_id = num_match.group() if num_match else clean_id
+        
+        combined = []
+        
+        # 1. Fetch explicitly tagged images of the actor (guaranteed to be them)
+        tagged_data = _tmdb(f"/person/{numeric_id}/tagged_images")
+        for idx, item in enumerate(tagged_data.get("results", [])):
+            path = item.get("file_path")
+            if path:
+                aspect_ratio = item.get("aspect_ratio", 1.0)
+                combined.append(("movie", {
+                    "id": f"{numeric_id}_tagged_{item.get('id', idx)}",
+                    "poster_path": path if aspect_ratio < 1 else None,
+                    "backdrop_path": path if aspect_ratio >= 1 else None,
+                    "popularity": 10000 - idx  # Massive boost so these appear first
+                }))
+                
+        # 2. Fill the remaining grid slots with their top movies and shows
+        credits_data = _tmdb(f"/person/{numeric_id}/combined_credits")
+        for item in credits_data.get("cast", []):
+            kind = item.get("media_type", "movie")
+            if item.get("backdrop_path") or item.get("poster_path"):
+                combined.append((kind, item))
+    else: 
+        sys.exit(1)
 
-    # FIX: lambda unpacks the (kind, item) tuple correctly
     combined_sorted = sorted(combined, key=lambda kt: kt[1].get("popularity", 0), reverse=True)
     seen = set()
     for k, item in combined_sorted:
@@ -260,19 +264,26 @@ def fetch_titles(tmdb_id, id_type, count, config):
 
 def _fetch_label(tmdb_id, id_type):
     name = ""
+    num_match = re.search(r'\d+', str(tmdb_id))
+    numeric_id = num_match.group() if num_match else tmdb_id
+    
     try:
-        if id_type == "network": name = _tmdb(f"/network/{tmdb_id}").get("name", "")
-        elif id_type == "company": name = _tmdb(f"/company/{tmdb_id}").get("name", "")
+        if id_type == "network": name = _tmdb(f"/network/{numeric_id}").get("name", "")
+        elif id_type == "company": name = _tmdb(f"/company/{numeric_id}").get("name", "")
         elif id_type == "provider":
             for ep in ("/watch/providers/tv", "/watch/providers/movie"):
-                match = next((p for p in _tmdb(ep, {"watch_region": "US"}).get("results", []) if p.get("provider_id") == tmdb_id), None)
+                match = next((p for p in _tmdb(ep, {"watch_region": "US"}).get("results", []) if str(p.get("provider_id")) == str(numeric_id)), None)
                 if match: name = match.get("provider_name", ""); break
         elif id_type == "genre":
             all_g = _tmdb("/genre/movie/list", {"language": "en-US"}).get("genres", []) + _tmdb("/genre/tv/list", {"language": "en-US"}).get("genres", [])
-            name = next((g["name"] for g in all_g if g["id"] == tmdb_id), "")
+            name = next((g["name"] for g in all_g if str(g["id"]) == str(numeric_id)), "")
+        elif id_type == "person":
+            # This endpoint strictly gets the profile text data to set the filename safely
+            name = _tmdb(f"/person/{numeric_id}").get("name", "")
     except Exception: pass
+    
     safe = re.sub(r"[^\w]+", "_", name.strip().lower()).strip("_")
-    return safe or f"{id_type}_{tmdb_id}"
+    return safe or f"{id_type}_{numeric_id}"
 
 def fetch_mdblist_items(url, count, sort=None, mediatype="all"):
     url = url.strip().rstrip("/")

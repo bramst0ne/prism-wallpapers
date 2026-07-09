@@ -83,7 +83,7 @@ class WallpaperGUI:
         self.type_var = tk.StringVar(value="network")
         self.type_combo = ttk.Combobox(
             self.type_frame, textvariable=self.type_var,
-            values=["network", "company", "provider", "genre"],
+            values=["network", "company", "provider", "genre", "person"],
             state="readonly", width=120
         )
         self.type_combo.pack(side="left", padx=5)
