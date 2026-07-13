@@ -1,4 +1,4 @@
-# Prism Wallpapers
+# Prism Wallpapers Studio
 
 An advanced automation suite for creating luxury media backdrops and logo cards. Designed to construct perfectly balanced, visually high-end brand assets using custom visual math, dynamic perspective warping, and spatial gradient mesh engines.
 
@@ -6,393 +6,118 @@ An advanced automation suite for creating luxury media backdrops and logo cards.
 
 ---
 
-## 🚀 Beginner Installation Guide
+## 🚀 One-Click Installation
 
-Welcome! This guide will help you get the required tools installed on your computer so you can run the scripts.
+The automated installers that will set up your Python environment, install dependencies, and create a Desktop shortcut for the GUI.
 
----
-
-### Step 1: Install Python (and add it to your system PATH)
-
-Python is the programming language used to run our wallpaper automation tools.
+**Prerequisite:** Ensure [Python](https://www.python.org/downloads/) is installed on your system. *(On Windows, make sure to check "Add python.exe to PATH" during installation).*
 
 #### 🪟 On Windows:
-1. Go to the official [Python Downloads page](https://www.python.org/downloads/) and download it.
-2. Open the downloaded installer file.
-   **CRITICAL STEP:** At the bottom of the installer window, check the box that says **"Add python.exe to PATH"** before clicking "Install Now". 
-   *(If you miss this step, your computer won't recognize Python commands).*
+1. Click code in the upper right corner of the github page and download the zip.
+2. Unzip the files and move them to you desired directory.
+3. Double-click the `install_windows.bat` file.
+4. The script will automatically build your virtual environment and install the required tools.
+5. Once finished, launch the app using the new **Prism Wallpapers** shortcut on your Desktop.
 
 #### 🍏 macOS & 🐧 Linux:
-1. Open your Terminal.
-2. Type the following command to install Python:
-   * **On Mac:** `xcode-select --install`
-   * **On Ubuntu/Debian Linux:** `sudo apt update && sudo apt install python3 python3-pip`
-
----
-
-### Step 2: Verify Your Installation
-
-Let's make sure everything was installed correctly.
-
-1. Open your terminal
-2. Type the following command and hit Enter:
+1. Click code in the upper right corner of the github page and download the zip.
+2. Unzip the files and move them to you desired directory.
+3. Open your terminal and navigate to the project folder.
+4. Run the installer:
    ```bash
-   python --version
-   ```
-   *Note: If you are on Windows or Mac/Linux and that doesn't work, try typing `python3 --version` instead.*
+   chmod +x install_mac_linux.sh
+   ./install_mac_linux.sh
+5. Launch the app using the generated Desktop shortcut.
 
-If you see something like `Python 3.11.x` (or a higher number), you are good to go!
+## 🔑 Setting Up Your API Keys
+This project connects to TMDb, Fanart.tv, and Mdblist to pull high-quality logos and media assets. You can either enter your keys through the GUI or you can edit the env file.
 
----
+If editing the env file:
+1. Open the .env.example file in any text editor.
+2. Paste your API keys after the = signs (you only need to configure the ones you will use, make all others empty):
+    TMDB_API_KEY=your_actual_tmdb_key_here
+    FANART_API_KEY=your_actual_fanart_key_here
+    MDBLIST_API_KEY=your_actual_mdblist_key_here
+3. Save the file as .env (remove the .example)
 
-### Step 3: Download this Project
+## 🖥️ Using the GUI Studio
+The easiest way to generate backdrops is using the included visual interface.
 
-To get all the scripts onto your computer:
-1. Scroll to the top of this GitHub page.
-2. Click **Code** button, and **Download ZIP**
-3. Extract the ZIP file anywhere on your computer (for example, your Desktop or Documents folder).
+Launch the program via your Desktop shortcut to access the Studio. From here, you can:
 
----
+- Select Styles: Choose between Type 1 (Landscape) and Type 2 (Mixed Grid) in both 3D perspective and Flat layouts.
 
-### Step 4: Open Terminal inside the Project Folder
+- Filter Data Sources: Pull dynamically from TMDb IDs, Curated TMDb Lists (like trending, popular, upcoming), or directly from custom MDBList URLs.
 
-You need to tell your command prompt to look directly inside the project directory:
+- Tweak Advanced Overrides: Adjust Depth of Field (DoF) blur, focus targets, perspective tilt, and layout gap spacing without touching the code.
 
-1. Open your terminal (Command Prompt on Windows / Terminal on Mac/Linux).
-2. Type `cd` followed by a space.
-3. Drag and drop the folder you extracted in **Step 3** directly into the terminal window. It will paste the path automatically.
-4. Hit Enter. It should look something like this:
-   ```bash
-   cd /path/to/prism-wallpapers
-   ```
+- Add Text Overlays: Inject custom text into the layout, complete with custom system font selection, scaling, and alignment.
 
----
+- Batch Resolutions: Generate 4K, 1080p, and 720p assets simultaneously.
 
-### Step 5: Install Python Tools (Pip & NumPy)
+## 🛠️ CLI Power-User Guide
+For those building automated pipelines, you can bypass the GUI and invoke the scripts directly from your terminal.
 
-Python uses a tool called `pip` to download extras like **NumPy** and **Pillow** which are required to run the scripts. We have put all the requirements into a single file for you.
-
-Run this command in your terminal and press Enter:
-
-```bash
-pip install -r requirements.txt
+### Project Structure
 ```
-*(If you used `python3` earlier, you may need to use `pip3 install -r requirements.txt` instead).*
-
-Once the installation finishes, your setup is complete! You are ready to generate your first wallpaper.
-
----
-![Nuvio Media Backdrop](https://github.com/bramst0ne/prism-wallpapers/blob/main/collections/networks/2552-apple-tv/backdrops/t2_1080p.jpg)
----
-## Project Structure
-
-```text
 prism-wallpapers/
-├── .gitignore
-├── README.md
-├── requirements.txt
-└── scripts/
-    ├── backdrop_T1.py
-    ├── backdrop_T1_flat.py
-    ├── backdrop_T2.py
-    ├── backdrop_T2_flat.py
-    ├── logo_cards.py
-    └── logo_pull.py
+   ├── .env
+   ├── install_windows.bat
+   ├── install_mac_linux.sh
+   ├── requirements.txt
+   └── scripts/
+       ├── gui_launcher.py
+       ├── wallpaper_engine.py
+       ├── logo_cards.py
+       └── logo_pull.py
+```
+### 1. The Unified Wallpaper Engine (wallpaper_engine.py)
+This script handles all backdrop generation (replacing the old individual layout scripts).
+
+Usage Syntax:
+
+`python scripts/wallpaper_engine.py --style <t1_3d|t1_flat|t2_3d|t2_flat> [options]`
+
+
+Examples:
+```
+# Generate a 3D Mixed grid for Netflix (Movies Only) in 4K and 1080p
+python scripts/wallpaper_engine.py --style t2_3d --id 213-movies --type network --res 4k 1080p
+
+# Generate a Flat Landscape grid from a custom MDBList
+python scripts/wallpaper_engine.py --style t1_flat --url "publicusername/top-rated-movies" --sort "score.desc"
+
+# Generate a Curated Trending TV grid with a custom text overlay
+python scripts/wallpaper_engine.py --style t2_3d --type curated --id trending-tv --text_overlay "Trending This Week" --text_align center
 ```
 
----
+### 2. Logo Cards & Design Hotfixes (logo_cards.py)
+This script places cropped, maximum-scale logos onto background cards. It features an integrated Design Hotfix Registry for precise positional nudges and advanced gradient generators.
 
-## 🔑 Setting Up Your API Keys (.env file)
+- Background Configuration Options (--bg):
 
-This project connects to **TMDb**, **Fanart.tv**, and **Mdblist** to pull high-quality logos and media assets.
+- Solid Color: --bg "0d0d11"
 
----
+- Linear Gradient: --bg "linear:151515:282828:45"
 
-#### Add your API keys
-Open your newly created `.env` from `.env.example` file in any text editor (like Notepad or VS Code) and paste your actual keys after the `=` signs:
+- Radial Gradient: --bg "radial:24242c:0f0f13:0.35:0.35"
 
-```text
-TMDB_API_KEY=your_actual_tmdb_key_here
-FANART_API_KEY=your_actual_fanart_key_here
-MDBLIST_API_KEY=your_actual_mdblist_key_here
-```
-
-#### Step 3: Save the file
-Save and close the file. You're done! 
-
-Now when you run the scripts or use the `generate.sh` pipeline, your computer will automatically load these keys into memory.
-
----
-
-## 🎨 Tool 1: logo_cards.py
-
-This script places cropped, maximum-scale logos onto background cards. It features an integrated Design Hotfix Registry for precise positional nudges and scale corrections, alongside advanced linear, radial, and multi-point mesh gradient generators.
-⚙️ Designer Customizations (Code Tweaks)
-
-To customize the core layout math without changing any command line logic, open logo_cards.py and adjust the configuration parameters at the top:
-```Python
-# Standard margin around the logo (Higher value = smaller logo / more breathing room)
-MARGIN_MIN = 240  
-
-# Visual Mass Centering (Slack)
-# 0.0 = Pure Bounding Box Center
-# 1.0 = Optical Center (Balances heavy elements like asymmetric text or swooshes)
-SLACK_X = 0.5
-SLACK_Y = 0.5
-
-# Visual Mass Density Rules
-DENSITY_THRESHOLD = 0.23  # Cutoff for sparse vs. bold logos
-DENSITY_BOOST = 1.18      # Size increase modifier for thin/sparse logos
-```
-🚀 Usage Syntax
-```Bash
-python3 logo_cards.py --source <networks|companies|both> --bg "<background-spec>"
-```
-📋 Background Configuration Options (--bg)
-# 1. Solid Color
-```Bash
-python3 logo_cards.py --source both --bg "0d0d11"
-```
-# 2. Linear Gradient (with Rotation)
-
-Format: linear:HEX1:HEX2[:ANGLE]
+- Dual-Center Mesh: --bg "dual:2d1d2d:231a3a:0e0914:0.3:0.5:0.7:0.5"
 
 Example:
-```Bash
-python3 logo_cards.py --source both --bg "linear:151515:282828:45"
 ```
-# 3. Radial Gradient (with Custom Center)
-
-Center coordinates are expressed as decimal percentages (0.0 to 1.0).
-
-Format: radial:HEX_CORE:HEX_OUTER[:CX:CY]
-
-  
-Example:
-```Bash
-python3 logo_cards.py --source both --bg "radial:24242c:0f0f13:0.35:0.35"
+python scripts/logo_cards.py --source both --bg "dual:2d1d2d:231a3a:0e0914:0.3:0.5:0.7:0.5"
 ```
-# 4. Dual Radial Pseudo-Mesh (Luxury Double Pool)
 
-Renders two overlapping radial color cores blending perfectly into a common outer background.
-
-Format: dual:HEX_CORE1:HEX_CORE2:HEX_OUTER:CX1:CY1:CX2:CY2
+### 3. Logo Extraction (logo_pull.py)
+Downloads max-resolution logos from TMDB and processes them (including advanced color inversion and white-mask cutouts).
 
 Example:
-```Bash
-python3 logo_cards.py --source both --bg "dual:2d1d2d:231a3a:0e0914:0.3:0.5:0.7:0.5"
 ```
----
-
-## 🖼️ Tool 2: backdrop_T2.py
-Lets use backdrop_T2.py for example, you can use any of the 4 provided scripts.
-Creates mixed portrait and landscape grid wallpapers complete with custom perspective warping, depth of field effects, and thematic overlay gradients.
-⚙️ Advanced Layout & Perspective Customization
-
-Open backdrop_T2.py in your code editor to fine-tune the master 3D space, tilt transformations, and optical depth effects.
-```Python
-
-# --- 3D CAMERA & PERSPECTIVE CONTROL ---
-TILT_DEG = 12        # Clockwise rotation angle for the grid plane
-WARP_FACTOR = 0.0008 # Controls the intensity of the perspective/vanishing point
-DEPTH_SCALE = 1.15   # Z-axis intensity (compression of distant grid items)
-
-# --- GRID GEOMETRY & SPACING ---
-GRID_ROWS = 4        # Total horizontal tiers in the layout
-GRID_COLS = 7        # Total columns per tier
-X_SPACING = 32       # Horizontal gap between portrait/landscape thumbnails
-Y_SPACING = 24       # Vertical gap between thumbnails
-
-# --- DEPTH OF FIELD (DOF) BLUR ENGINE ---
-BLUR_MIN = 0         # Focus point blur intensity (0 = crystal clear)
-BLUR_MAX = 8         # Maximum blur applied to items at the edge of the field
-BLUR_FALLOFF = 1.4   # Exponential rate of blur increase from focus center
-```
-🚀 Usage Syntax
-```Bash
-python3 backdrop_T2.py --id <TMDB_ID> --type <network|provider|company|genre>
-```
-Example:
-```Bash
-python3 backdrop_T2.py --id 213 --type network          # This for Netflix
-
-python3 backdrop_T2.py --id 49 8304 --type network      # two IDs for multiples, This will mix HBO with HBO max
-
-python3 backdrop_T2.py --id 41077 --type company        # this one is for a A24, a company/production studio, the --type must be company
-
-python3 backdrop_T2.py --id 28 --type genre             # the type here is genre, so the ID has to be genre specific 
+python scripts/logo_pull.py --id 213 49 --type network --max 1
 ```
 
-You'll find more IDs in the tmdb_reference_ids.txt file
+## 🛡️ Content Safety & Blacklisting
+All dynamic backdrop and card generation includes an integrated Adult Content Filter to ensure your server wallpapers remain professional. It actively blocks NSFW metadata at the API level.
 
-
-## MDBList Sorting Options
-
-When pulling items from MDBList, you can customize the output sort order using the `--sort` parameter. 
-
-### Usage
-```bash
-python3 backdrop_T2.py --url "[https://mdblist.com/lists/user/slug](https://mdblist.com/lists/user/slug)" --sort <option>
-```
-or you can also use the Shortened URL Format
-```bash
-python3 backdrops_T2.py --url "publicusername/top-rated-movies"
-
-```
-# Supported Sort Parameters
-```
-score.desc / score.asc  | MDBList overall combined score (Default)
-imdbrating.desc / imdbrating.asc    | Sort by IMDb user ratings
-imdbvotes.desc / imdbvotes.asc  | Sort by the total number of IMDb votes
-tmdbpopular.desc / tmdbpopular.asc  | Sort by TMDb's internal popularity metric
-released.desc / released.asc    | Sort by original theatrical release date
-```
-
----
-
-## 🛠️ Automated Generation (`generate.sh`)
-
-To save you from typing multiple commands for every single ID, you can use the `generate.sh` automation script. It automatically pulls the logos, optimizes them, and generates both Type 1 and Type 2 backdrops in one go.
-
----
-
-### 💻 How to Run It on Your System
-
-#### 🪟 On Windows (Using Git Bash)
-Windows Command Prompt cannot run `.sh` files natively. The easiest way to run it is using **Git Bash**, which was installed automatically when you installed Git.
-
-1. Go to your project folder where `generate.sh` is located.
-2. Right-click an empty space in the folder and select **Git Bash Here**.
-3. Type the following command and press Enter:
-   ```bash
-   ./generate.sh 213 network
-   ```
-
-#### 🍏 macOS & 🐧 Linux
-1. Open your Terminal and navigate to the project folder (`cd /path/to/prism-wallpapers`).
-2. Before running it the first time, give the script permission to run by typing:
-   ```bash
-   chmod +x generate.sh
-   ```
-3. Run the script:
-   ```bash
-   ./generate.sh 213 network
-   ```
-
-if it says python is missing, edit generate.sh where it says python3 to just python
----
-
-### 📖 Usage Examples
-
-The script is incredibly flexible and accepts arguments in different ways:
-
-* **Standard Order (Type then IDs):**
-  ```bash
-  ./generate.sh 213 network
-  ```
-* **Reversed Order (IDs then Type):**
-  ```bash
-  ./generate.sh 213 network
-  ```
-* **Multiple IDs at Once:**
-  ```bash
-  ./generate.sh 213 49 1024 network
-  ```
-
-*Supported types are: `network`, `company`, `genre`, and `provider`.*
-
-
-## Curated Collections (Direct TMDb Lists)
-
-You can generate dynamic backdrops using TMDb's global lists by setting the `--type` to `curated`. This skips logos and fetches the top trending, popular, top-rated, or upcoming titles.
-
-### Supported Curated Types
-
-| Type Keyword | Description |
-| :--- | :--- |
-| `trending` | Daily trending movies and TV shows |
-| `popular` | Current most popular titles on TMDb |
-| `top_rated` | All-time top rated movies and TV shows |
-| `upcoming` | Anticipated/Upcoming theatrical & digital releases |
-
-### Usage Examples
-
-```bash
-# Generate daily trending backdrops
-./generate.sh trending curated
-
-# Generate upcoming movie/TV backdrops
-./generate.sh upcoming curated
-```
-
-## Skipping Logo Downloads & Mixing IDs
-
-To save time or prevent overwriting existing downloaded logos, you can use the `--skip-logos` flag. This will bypass the `logo_pull.py` script entirely and jump straight to generating backdrops.
-
-### Usage Example
-```bash
-# Update existing backdrops without re-fetching any logos
-./generate.sh 6100 network --skip-logos
-
-# Mix IDs while skipping the logo download step
-./generate.sh 6100-2076 network --skip-logos
-```
-
-Note: The --skip-logos flag is applied automatically when using --type curated, as these lists do not require individual brand logo downloads.
-
-## 📂 Media-Specific Filtering (Separating Movies vs. TV)
-You can now explicitly separate content by adding `-movies` or `-tv` suffixes to your IDs. This is supported across all categories including Networks, Companies, Genres, and Curated lists.
-
-### Usage Examples
-| Goal | Command |
-| :--- | :--- |
-| **Netflix (Movies Only)** | `./generate.sh 213-movies network` |
-| **Disney+ (TV Only)** | `./generate.sh 2739-tv provider` |
-| **Trending (TV Only)** | `./generate.sh trending-tv curated` |
-| **Action (Mixed)** | `./generate.sh 28 genre` |
-
-*The automation script (`generate.sh`) will automatically detect these suffixes and create dedicated folders on your server (e.g., `/networks/213-movies-netflix/`).*
-
----
-
-🔧 Overriding Specific Logos (Design Hotfixes)
-
-If a specific logo needs manual tuning due to an outlier shape, edit the DESIGN_HOTFIXES registry in logo_cards.py:
-```Python
-DESIGN_HOTFIXES = {
-    "card_6219_": {
-        "nudge_x": -35,   # Move 35px to the left
-        "nudge_y": 0,     # Keep vertical center
-        "scale_mod": 1.0  # Maintain baseline scale
-    },
-    "card_1112_": {
-        "nudge_x": 0,
-        "nudge_y": 0,
-        "scale_mod": 1.15 # 15% size boost
-    }
-}
-```
-
----
-
-## 🛡️ Enhanced Content Safety
-All dynamic backdrop and card generation now includes an integrated **Adult Content Filter**. By default, the system blocks NSFW metadata and hentai at the API level to ensure your home server wallpapers remain professional and safe for all audiences.
-
-## 🛠️ Manual Maintenance (Blacklisting a Title)
-
-If a title slips through the automated filters (and it will, TMDB adult filter is highly unreliable), you can permanently block it using its TMDB ID.
-
-    Identify the ID: Run any script or the generate.sh pipeline. The console will print a debug line for every title:
-    DEBUG: 912345 | Title Name.
-
-    Add to Blacklist: Open your script and add that ID to the BLOCKED_IDS set:
-    Python
-
-    BLOCKED_IDS = {
-        912345,  # Add the new ID here
-        1241752,
-        95897,
-    }
-
----
-
+To manually blacklist specific titles that slip through TMDB's filters, open wallpaper_engine.py and add the TMDB ID to the BLOCKED_IDS set at the top of the file.
