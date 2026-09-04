@@ -83,6 +83,24 @@ STYLE_PROFILES = {
         "tilt": -10, "offset_x": 335, "offset_y": 100,
         "focus_x": 0.5, "focus_y": 0.0, "focus_radius": 0.30,
         "dof_x": 0.75, "dof_y": 0.25
+    },
+    "t3_3d": {
+        "layout": "t1", "use_logo": True,
+        "landscape_w": 400, "portrait_w": None,
+        "pov_x": 1.0, "pov_y": -1.0, "warp": 0.37,
+        "tilt": -10, "offset_x": 170, "offset_y": -80,
+        "focus_x": 0.7, "focus_y": 0.2, "focus_radius": 0.35,
+        "dof_x": 0.75, "dof_y": 0.25,
+        "logo_scale": 0.30, "logo_x": 0.05, "logo_y": 0.90, "logo_shadow": 3
+    },
+    "t3_flat": {
+        "layout": "t1", "use_logo": True,
+        "landscape_w": 400, "portrait_w": None,
+        "pov_x": 0.0, "pov_y": 0.0, "warp": 0.0,
+        "tilt": -10, "offset_x": 170, "offset_y": -80,
+        "focus_x": 0.75, "focus_y": 0.5, "focus_radius": 0.35,
+        "dof_x": 0.75, "dof_y": 0.25,
+        "logo_scale": 0.30, "logo_x": 0.05, "logo_y": 0.90, "logo_shadow": 3
     }
 }
 
@@ -347,6 +365,124 @@ def resolve_image(kind, item, prefer_poster=False):
         except Exception:
             if attempt == 2: return None
             time.sleep(1)
+
+def _fetch_logo_url(kind, tmdb_id, lang_code):
+    """Fetch a title logo URL from TMDB, then Fanart.tv as fallback.
+    
+    Args:
+        kind: 'movie' or 'tv'
+        tmdb_id: TMDB ID of the title
+        lang_code: 2-letter ISO-639-1 language code (e.g. 'en', 'ja')
+    
+    Returns:
+        URL string or None
+    """
+    # 1. Try TMDB logos endpoint
+    try:
+        endpoint = f"/{kind}/{tmdb_id}/images"
+        params = {"include_image_language": f"{lang_code},null"}
+        data = _tmdb(endpoint, params)
+        logos = data.get("logos", [])
+        if logos:
+            # Prefer logos matching the requested language, then null, then any
+            lang_logos = [l for l in logos if l.get("iso_639_1") == lang_code]
+            null_logos = [l for l in logos if not l.get("iso_639_1")]
+            ordered = lang_logos + null_logos
+            if not ordered:
+                ordered = logos
+            # Pick highest voted
+            best = sorted(ordered, key=lambda l: float(l.get("vote_average", 0)), reverse=True)[0]
+            return f"{TMDB_IMG_BASE}/w500{best['file_path']}"
+    except Exception:
+        pass
+
+    # 2. Fanart.tv fallback
+    if FANART_API_KEY:
+        try:
+            if kind == "tv":
+                tvdb_id = _tmdb(f"/tv/{tmdb_id}/external_ids").get("tvdb_id")
+                if tvdb_id:
+                    fanart_data = requests.get(f"{FANART_BASE}/tv/{tvdb_id}", params={"api_key": FANART_API_KEY}, timeout=15).json()
+                    for key in ("hdtvlogo", "clearlogo"):
+                        lang_logos = [c for c in fanart_data.get(key, []) if c.get("lang") == lang_code]
+                        en_logos = [c for c in fanart_data.get(key, []) if c.get("lang") == "en"] if lang_code != "en" else []
+                        candidates = lang_logos or en_logos or fanart_data.get(key, [])
+                        if candidates:
+                            return sorted(candidates, key=lambda c: int(c.get("likes", 0)), reverse=True)[0]["url"]
+            else:
+                fanart_data = requests.get(f"{FANART_BASE}/movies/{tmdb_id}", params={"api_key": FANART_API_KEY}, timeout=15).json()
+                for key in ("hdmovielogo", "movielogo"):
+                    lang_logos = [c for c in fanart_data.get(key, []) if c.get("lang") == lang_code]
+                    en_logos = [c for c in fanart_data.get(key, []) if c.get("lang") == "en"] if lang_code != "en" else []
+                    candidates = lang_logos or en_logos or fanart_data.get(key, [])
+                    if candidates:
+                        return sorted(candidates, key=lambda c: int(c.get("likes", 0)), reverse=True)[0]["url"]
+        except Exception:
+            pass
+
+    return None
+
+def _composite_logo(backdrop, logo_img, config):
+    """Composite a logo onto a backdrop image using config positioning."""
+    bw, bh = backdrop.size
+    lw, lh = logo_img.size
+
+    max_logo_h = int(bh * config.get("logo_scale", 0.30))
+    max_logo_w = int(bw * 0.50)
+    scale = min(max_logo_w / lw, max_logo_h / lh)
+    new_w, new_h = int(lw * scale), int(lh * scale)
+    if new_w < 1 or new_h < 1:
+        return backdrop
+
+    logo_resized = logo_img.resize((new_w, new_h), Image.LANCZOS)
+
+    # Position based on config (logo_x, logo_y are anchor points as fraction of backdrop)
+    x = int(bw * config.get("logo_x", 0.05))
+    y = int(bh * config.get("logo_y", 0.90)) - new_h
+
+    # Clamp to stay within bounds
+    x = max(0, min(x, bw - new_w))
+    y = max(0, min(y, bh - new_h))
+
+    # Drop shadow
+    shadow_offset = config.get("logo_shadow", 3)
+    if shadow_offset > 0:
+        shadow = Image.new("RGBA", (new_w, new_h), (0, 0, 0, 0))
+        # Create shadow from logo alpha channel
+        _, _, _, a = logo_resized.split()
+        shadow_layer = Image.new("RGBA", (new_w, new_h), (0, 0, 0, 160))
+        shadow_layer.putalpha(a)
+        shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(radius=shadow_offset))
+        backdrop.paste(shadow_layer, (x + shadow_offset, y + shadow_offset), shadow_layer)
+
+    backdrop.paste(logo_resized, (x, y), logo_resized)
+    return backdrop
+
+def resolve_image_with_logo(kind, item, config):
+    """Resolve a backdrop image and composite the title logo onto it."""
+    tmdb_id = item["id"]
+
+    # Fetch backdrop
+    backdrop = resolve_image(kind, item, prefer_poster=False)
+    if not backdrop:
+        return None
+
+    # Determine 2-letter language code from config
+    lang_full = config.get("tmdb_lang", "en-US")
+    lang_code = lang_full.split("-")[0] if lang_full else "en"
+
+    # Fetch logo
+    logo_url = _fetch_logo_url(kind, tmdb_id, lang_code)
+    if not logo_url:
+        return backdrop  # Graceful fallback: return backdrop without logo
+
+    try:
+        logo_img = Image.open(io.BytesIO(requests.get(logo_url, timeout=20).content)).convert("RGBA")
+    except Exception:
+        return backdrop
+
+    return _composite_logo(backdrop, logo_img, config)
+
 
 def _make_tile(img, tw, th, opacity=1.0, config=None):
     iw, ih = img.size
@@ -640,6 +776,10 @@ def main():
     parser.add_argument("--portrait_w", type=int, default=None)
     parser.add_argument("--gap", type=int, default=None)
     parser.add_argument("--card_radius", type=int, default=None)
+    parser.add_argument("--logo_scale", type=float, default=None, help="Logo height as fraction of backdrop (default: 0.30)")
+    parser.add_argument("--logo_x", type=float, default=None, help="Logo horizontal position 0.0-1.0 (default: 0.05)")
+    parser.add_argument("--logo_y", type=float, default=None, help="Logo vertical position 0.0-1.0 (default: 0.90)")
+    parser.add_argument("--logo_shadow", type=int, default=None, help="Logo drop shadow blur radius in px (default: 3, 0=off)")
     
     # Perspective & Warp
     parser.add_argument("--pov_x", type=float, default=None)
@@ -679,6 +819,10 @@ def main():
     if args.focus_radius is not None: config["focus_radius"] = args.focus_radius
     if args.dof_x is not None: config["dof_x"] = args.dof_x
     if args.dof_y is not None: config["dof_y"] = args.dof_y
+    if args.logo_scale is not None: config["logo_scale"] = args.logo_scale
+    if args.logo_x is not None: config["logo_x"] = args.logo_x
+    if args.logo_y is not None: config["logo_y"] = args.logo_y
+    if args.logo_shadow is not None: config["logo_shadow"] = args.logo_shadow
     
     # API Filters Assignment
     if args.tmdb_sort is not None: config["tmdb_sort"] = args.tmdb_sort
@@ -753,10 +897,15 @@ def main():
     
     print("Downloading images...")
     portrait_imgs, landscape_imgs, fail_n = [], [], 0
+    use_logo = config.get("use_logo", False)
     for i, (kind, item) in enumerate(titles):
         sys.stdout.write(f"  [{i+1:02d}/{len(titles)}] Fetching...\r"); sys.stdout.flush()
-        land = resolve_image(kind, item, prefer_poster=False)
-        port = resolve_image(kind, item, prefer_poster=True)
+        if use_logo:
+            land = resolve_image_with_logo(kind, item, config)
+            port = None
+        else:
+            land = resolve_image(kind, item, prefer_poster=False)
+            port = resolve_image(kind, item, prefer_poster=True)
         
         if config["layout"] == "t1":
             if land: landscape_imgs.append({"id": item["id"], "img": land})

@@ -57,7 +57,9 @@ class WallpaperGUI:
             ("Type 1 (Landscape 3D)", "t1_3d"),
             ("Type 1 (Landscape Flat)", "t1_flat"),
             ("Type 2 (Mixed 3D)", "t2_3d"),
-            ("Type 2 (Mixed Flat)", "t2_flat")
+            ("Type 2 (Mixed Flat)", "t2_flat"),
+            ("Type 3 (Landscape 3D w/ logo)", "t3_3d"),
+            ("Type 3 (Landscape flat w/ logo)", "t3_flat")
         ]
         for text, val in styles:
             ttk.Radiobutton(frame_style, text=text, value=val, variable=self.style_var).pack(anchor="w")
@@ -165,6 +167,10 @@ class WallpaperGUI:
                 ("Portrait Width", "--portrait_w"),
                 ("Tile Gap", "--gap"),
                 ("Card Radius", "--card_radius"),
+                ("Logo Scale (0.1-0.5)", "--logo_scale"),
+                ("Logo X (0.0-1.0)", "--logo_x"),
+                ("Logo Y (0.0-1.0)", "--logo_y"),
+                ("Logo Shadow (px)", "--logo_shadow"),
             ],
             "Perspective & Warp": [
                 ("POV X (-1.0 to 1.0)", "--pov_x"),
